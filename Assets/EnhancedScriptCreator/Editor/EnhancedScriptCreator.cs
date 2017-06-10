@@ -8,7 +8,7 @@ namespace EnhancedScriptCreator
 {
     public class EnhancedScriptCreator : UnityEditor.AssetModificationProcessor
     {
-        private static string assetPath = "EnhancedScriptCreator/Editor";
+        private static string assetPath = Application.dataPath + "/EnhancedScriptCreator/Editor";
 
         private static string scriptsPath = "eC#Scripts";
         private static string generatedPath = "GeneratedCode";
@@ -39,8 +39,7 @@ namespace EnhancedScriptCreator
             {
                 string code = AddHeader();
 
-                string path = Path.Combine(Application.dataPath, assetPath);
-                path = Path.Combine(path, scriptsPath);
+                string path = Path.Combine(assetPath, scriptsPath);
 
                 DirectoryInfo dir = new DirectoryInfo(path);
                 FileInfo[] info = dir.GetFiles("*.txt");
@@ -53,13 +52,10 @@ namespace EnhancedScriptCreator
 
                 if (info.Length > 0)
                 {
-                    string newPath = Path.Combine(Application.dataPath, assetPath);
-                    newPath = Path.Combine(newPath, generatedPath);
+                    string newPath = Path.Combine(assetPath, generatedPath);
 
                     Directory.CreateDirectory(newPath);
-
-                    newPath = Path.Combine(Application.dataPath, assetPath);
-                    newPath = Path.Combine(newPath, generatedPath);
+ 
                     newPath = Path.Combine(newPath, generatedFileName + ".cs");
                     File.WriteAllText(newPath, code);
                 }
@@ -69,6 +65,7 @@ namespace EnhancedScriptCreator
             {
                 string s = "using UnityEditor;" + Environment.NewLine;
                 s += "using UnityEngine;" + Environment.NewLine;
+                s += "using System.IO;" + Environment.NewLine;
                 s += "namespace EnhancedScriptCreator" + Environment.NewLine;
                 s += "{" + Environment.NewLine;
 
@@ -94,19 +91,17 @@ namespace EnhancedScriptCreator
 
             static string AddBody(FileInfo fileInfo)
             {
-                // var obj = Selection.activeObject;
-                // string path = AssetDatabase.GetAssetPath(obj);
+                // string str = "string name = " +  @"""" + fileInfo.FullName + @"""" + ";" + Environment.NewLine;
+                // str += "var obj = Selection.activeObject;" + Environment.NewLine;
+                // str += "string path = AssetDatabase.GetAssetPath(obj);" + Environment.NewLine;
+                // str += "string code = File.ReadAllText(name);" + Environment.NewLine;
+                // str += "string filePath = path + \"/NewFile.cs\";" + Environment.NewLine;
+                // str += "File.WriteAllText(filePath, code);" + Environment.NewLine;
+                // str += "AssetDatabase.ImportAsset(filePath, ImportAssetOptions.ForceUpdate);" + Environment.NewLine;
 
-                // string newPath = path.Substring(0, fileInfo.Name.LastIndexOf("\\"));
-
-                // ProjectWindowUtil.CreateAsset(Resources.LoadAssetAtPath(fileInfo.Name, typeof(TextAsset)), newPath + "\\NewFile.cs");    
-                // fileInfo.FullName.Replace("/", @"/""")          
-
-                string str = "string name = " +  @"""" + fileInfo.FullName + @"""" + ";" + Environment.NewLine;
-                str += "var obj = Selection.activeObject;" + Environment.NewLine;
-                str += "string path = AssetDatabase.GetAssetPath(obj);" + Environment.NewLine;
-                //str += "string newPath = name.Substring(0, name.LastIndexOf(\"/\"));" + Environment.NewLine;
-                str += "ProjectWindowUtil.CreateAsset(Resources.LoadAssetAtPath(name, typeof(TextAsset)), path + \"//NewFile.cs\");" + Environment.NewLine;
+                string str = "SaveWindow window = (SaveWindow)EditorWindow.GetWindow(typeof(SaveWindow));" + Environment.NewLine;
+                str += "window.codeFilePath = " +  @"""" + fileInfo.FullName + @"""" + ";" + Environment.NewLine;
+                str += "window.Show();" + Environment.NewLine;
 
                 return str;
             }

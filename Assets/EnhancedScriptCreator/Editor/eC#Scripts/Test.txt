@@ -1,1 +1,12 @@
-Test
+public class #SCRIPTNAME#
+{
+    void Start()
+    {
+
+    }
+
+    void Update()
+    {
+
+    }
+}
