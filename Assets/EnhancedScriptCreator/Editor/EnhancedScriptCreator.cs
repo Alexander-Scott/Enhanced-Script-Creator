@@ -4,6 +4,7 @@ using UnityEditor;
 using System.IO;
 using System;
 using System.Linq;
+using System.Text;
 
 namespace EnhancedScriptCreator
 {
@@ -18,6 +19,30 @@ namespace EnhancedScriptCreator
 
         // True when this class has processed the assets. Used to prevent infinite asset processing
         private static bool assetsProcessed = false;
+
+        // Called by methods in the generated class. Used to actually create the new class
+        public static void CreateClass(string fileName, string codeFilePath)
+        {
+            var obj = Selection.activeObject;
+            string currentPath = AssetDatabase.GetAssetPath(obj); // Find the folder the user is currently in in the editor
+
+            // Open a save dialog
+            string savePath = EditorUtility.SaveFilePanelInProject("Save Your Class", fileName.Substring(0, fileName.LastIndexOf('.')) + ".cs", 
+                "cs", "Please enter a name for your new class", currentPath);
+
+            if (!string.IsNullOrEmpty(savePath)) // After the user has pressed save
+            {
+                string code = File.ReadAllText(codeFilePath); // Get all the code from the text file
+                
+                fileName = Path.GetFileName(savePath);
+                fileName = fileName.Substring(0, fileName.LastIndexOf("."));
+                code = code.Replace("#SCRIPTNAME#", fileName); // Remove any placeholders
+
+                // Save the new file and force an asset database refresh
+                File.WriteAllText(savePath, code);
+                AssetDatabase.ImportAsset(savePath, ImportAssetOptions.ForceUpdate);
+            }
+        }
 
         // Called by Unity when an asset has finished importing
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPath)
@@ -46,79 +71,75 @@ namespace EnhancedScriptCreator
         // Generates the menu headers for the classes
         static void GenerateMenuHeaders()
         {
-            // TODO: CHANGE TO STRING BUILDER
-            string code = AddHeader();
+            StringBuilder code = new StringBuilder();
+            string scriptsFolderPath = Path.Combine(baseAssetPath, scriptsPath);
+            string generatedFilePath = baseAssetPath;
 
-            string path = Path.Combine(baseAssetPath, scriptsPath);
+            DirectoryInfo directory = new DirectoryInfo(scriptsFolderPath);
+            FileInfo[] classes = directory.GetFiles("*.txt"); // Find all the .txt classes within the scripts folder
 
-            DirectoryInfo dir = new DirectoryInfo(path);
-            FileInfo[] info = dir.GetFiles("*.txt");
-            foreach (FileInfo f in info)
+            AddHeader(ref code);
+
+            for (int i = 0; i < classes.Length; i++)
             {
-                code += ProcessFile(f);
+                AddMethod(ref code, classes[i], i); // Add the method body to the generated class
             }
 
-            code += AddFooter();
+            AddFooter(ref code);
 
-            if (info.Length > 0)
-            {
-                string newPath = baseAssetPath;
+            Directory.CreateDirectory(generatedFilePath); // Make sure the directory exists
 
-                Directory.CreateDirectory(newPath);
+            generatedFilePath = Path.Combine(generatedFilePath, generatedFileName + ".cs");
 
-                newPath = Path.Combine(newPath, generatedFileName + ".cs");
-                File.WriteAllText(newPath, code);
-                AssetDatabase.ImportAsset("Assets" + newPath.Replace(Application.dataPath, ""), ImportAssetOptions.ForceUpdate);
+            // Create the file containing the code and then force an asset database update
+            File.WriteAllText(generatedFilePath, code.ToString());
+            AssetDatabase.ImportAsset("Assets" + generatedFilePath.Replace(Application.dataPath, ""), ImportAssetOptions.ForceUpdate);
 
-                assetsProcessed = true;
-            }
+            // Set flag to true so this function doesn't get called infinitely
+            assetsProcessed = true;
         }
 
-        static string AddHeader()
+        // Add a header to the generated class including usings, namepsace and class name
+        static void AddHeader(ref StringBuilder s)
         {
-            string s = "using UnityEditor;" + Environment.NewLine;
-            s += "using UnityEngine;" + Environment.NewLine;
-            s += "using System.IO;" + Environment.NewLine;
-            s += "namespace EnhancedScriptCreator" + Environment.NewLine;
-            s += "{" + Environment.NewLine;
+            s.Append("using UnityEditor;" + Environment.NewLine);
+            s.Append("using UnityEngine;" + Environment.NewLine);
+            s.Append("using System.IO;" + Environment.NewLine);
+            s.Append("namespace EnhancedScriptCreator" + Environment.NewLine);
+            s.Append("{" + Environment.NewLine);
 
-            s += "public class GeneratedCode" + Environment.NewLine;
-            s += "{" + Environment.NewLine;
-
-            return s;
+            s.Append("public class " + generatedFileName + Environment.NewLine);
+            s.Append("{" + Environment.NewLine);
         }
 
-        static string ProcessFile(FileInfo fileInfo)
+        // Add a menu header method that allows this method to be called from the editor menu
+        static void AddMethod(ref StringBuilder s, FileInfo fileInfo, int index)
         {
             string name = fileInfo.Name.Substring(0, fileInfo.Name.LastIndexOf(".")).Replace(" ", "");
 
-            string s = "[MenuItem (\"Assets/Create/eC# Script/" + name + "\", false, 81)]" + Environment.NewLine;
-            s += "private static void MenuItem" + name + "()" + Environment.NewLine;
-            s += "{" + Environment.NewLine;
-            s += AddBody(fileInfo);
-            s += "}" + Environment.NewLine;
-            s += Environment.NewLine;
+            s.Append("[MenuItem (\"Assets/Create/eC# Script/" + name + "\", false, 81)]" + Environment.NewLine);
+            s.Append("private static void MenuItem" + index + "()" + Environment.NewLine);
+            s.Append("{" + Environment.NewLine);
 
-            return s;
+            AddMethodBody(ref s, fileInfo);
+
+            s.Append("}" + Environment.NewLine);
+            s.Append(Environment.NewLine);
         }
 
-        static string AddBody(FileInfo fileInfo)
+        // Add the body of the method which provides a call to the function which creates the new class
+        static void AddMethodBody(ref StringBuilder s, FileInfo fileInfo)
         {
-            string str = "CreateScriptWindow window = (CreateScriptWindow)EditorWindow.GetWindow(typeof(CreateScriptWindow));" + Environment.NewLine;
-            str += "window.codeFilePath = " + @"""" + fileInfo.FullName + @"""" + ";" + Environment.NewLine;
-            str += "window.Show();" + Environment.NewLine;
-
-            return str;
+            s.Append("EnhancedScriptCreator.CreateClass(\"" + fileInfo.Name + "\", \"" + fileInfo.FullName + "\");" + Environment.NewLine);
         }
 
-        static string AddFooter()
+        static void AddFooter(ref StringBuilder s)
         {
-            string s = "}" + Environment.NewLine;
-            s += "}" + Environment.NewLine;
-
-            return s;
+            s.Append("}" + Environment.NewLine);
+            s.Append("}" + Environment.NewLine);
         }
 
+        // Loops through an array of strings to find a specific string
         static bool CheckPathsForDirectory(string[] strings)
         {
             for (int i = 0; i < strings.Length; i++)
@@ -130,51 +151,6 @@ namespace EnhancedScriptCreator
             }
 
             return false;
-        }
-    }
-
-    public class CreateScriptWindow : EditorWindow
-    {
-        public string codeFilePath;
-
-        string className;
-
-        void OnGUI()
-        {
-            className = EditorGUILayout.TextField("Class Name", className);
-
-            if (GUILayout.Button("Create Script"))
-            {
-                OnClickCreate();
-
-                GUIUtility.ExitGUI();
-            }
-        }
-
-        void OnClickCreate()
-        {
-            if (string.IsNullOrEmpty(className))
-            {
-                EditorUtility.DisplayDialog("Unable to create class", "Please enter a valid class name", "Close");
-                return;
-            }
-
-            var obj = Selection.activeObject;
-            string path = AssetDatabase.GetAssetPath(obj);
-
-            string filePath = path + "/" + className + ".cs";
-
-            string code = ReplacePlaceholders(File.ReadAllText(codeFilePath));
-
-            File.WriteAllText(filePath, code);
-            AssetDatabase.ImportAsset(filePath, ImportAssetOptions.ForceUpdate);
-
-            Close();
-        }
-
-        string ReplacePlaceholders(string code)
-        {
-            return code.Replace("#SCRIPTNAME#", className);
         }
     }
 }

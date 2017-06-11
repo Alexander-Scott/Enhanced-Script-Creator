@@ -1,0 +1,54 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public class #SCRIPTNAME# : MonoBehaviour
+{
+    public GameObject pooledObject;
+    public int numberOfObjects = 30; // Number of objects to initalise
+
+    private List<GameObject> listOfAvailableObjects = new List<GameObject>();
+    private List<GameObject> listOfUnavailableObjects = new List<GameObject>();
+
+    void Start()
+    {
+        // Instansiates a number of objects and puts them in a pool
+        for (int i = 0; i < numberOfObjects; i++)
+        {
+            GameObject newObject = Instantiate(pooledObject);
+            newObject.name = newObject.name + i;
+            newObject.gameObject.SetActive(false); // Inactive until pulled from the pool
+
+            listOfAvailableObjects.Add(newObject);
+        }
+    }
+
+    public GameObject GetNewObject()
+    {
+        GameObject newObject;
+
+        if (listOfAvailableObjects.Count > 0) // If we have available objects in the object pool, reference it and remove it from the pool
+        {
+            newObject = listOfAvailableObjects[0];
+            listOfAvailableObjects.RemoveAt(0);
+            newObject.gameObject.SetActive(true);
+        }
+        else // No left in the object pool. Create one on the fly
+        {
+            numberOfObjects++;
+            newObject = Instantiate(pooledObject);
+            newObject.name = newObject.name + numberOfObjects;
+        }
+
+        listOfUnavailableObjects.Add(newObject);
+
+        return newObject;
+    }
+
+    public void ReturnObject(GameObject newObject)
+    {
+        newObject.gameObject.SetActive(false);
+
+        listOfUnavailableObjects.Remove(newObject);
+        listOfAvailableObjects.Add(newObject);
+    }
+}

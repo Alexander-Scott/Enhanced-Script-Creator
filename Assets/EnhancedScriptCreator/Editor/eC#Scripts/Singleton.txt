@@ -1,0 +1,30 @@
+using UnityEngine;
+
+public class #SCRIPTNAME# : MonoBehaviour
+{
+    private static #SCRIPTNAME# _instance;
+
+    public static #SCRIPTNAME# Instance { get { return _instance; } }
+
+    void Awake()
+    {
+        if (_instance != null && _instance != this)
+        {
+            Destroy(this.gameObject);
+        }
+        else
+        {
+            _instance = this;
+        }
+    }
+
+    void Start()
+    {
+
+    }
+
+    void Update()
+    {
+
+    }
+}
