@@ -44,11 +44,11 @@ public class #SCRIPTNAME# : MonoBehaviour
         return newObject;
     }
 
-    public void ReturnObject(GameObject newObject)
+    public void ReturnObject(GameObject returnObject)
     {
-        newObject.gameObject.SetActive(false);
+        returnObject.gameObject.SetActive(false);
 
-        listOfUnavailableObjects.Remove(newObject);
-        listOfAvailableObjects.Add(newObject);
+        listOfUnavailableObjects.Remove(returnObject);
+        listOfAvailableObjects.Add(returnObject);
     }
 }
