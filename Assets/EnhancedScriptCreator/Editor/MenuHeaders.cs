@@ -23,5 +23,11 @@ private static void MenuItem2()
 EnhancedScriptCreator.CreateClass("Singleton.txt", "/Users/alexscott/Dropbox/Projects/Enhanced-Script-Creator/Assets/EnhancedScriptCreator/Editor/Template Scripts/Singleton.txt");
 }
 
+[MenuItem ("Assets/Create/eC# Script/ThreadedProcess", false, 81)]
+private static void MenuItem3()
+{
+EnhancedScriptCreator.CreateClass("ThreadedProcess.txt", "/Users/alexscott/Dropbox/Projects/Enhanced-Script-Creator/Assets/EnhancedScriptCreator/Editor/Template Scripts/ThreadedProcess.txt");
+}
+
 }
 }

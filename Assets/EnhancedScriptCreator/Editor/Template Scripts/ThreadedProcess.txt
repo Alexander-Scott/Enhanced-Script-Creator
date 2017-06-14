@@ -1,0 +1,81 @@
+// Credit goes to: http://answers.unity3d.com/questions/357033/unity3d-and-c-coroutines-vs-threading.html
+
+/* Usage
+    Put threaded task in ThreadFunction(). Do not use Unity API.
+
+    #SCRIPTNAME# threadedProcess = new ThreadedProcess();
+    threadedProcessed.Start();
+
+    To wait for the task to finish, use 'yield return StartCoroutine(myJob.WaitFor());' or simply call CheckComplete().
+ */
+
+using System.Collections;
+
+public class #SCRIPTNAME#
+{
+    private bool isDone = false;
+    private object handle = new object();
+    private System.Threading.Thread thread = null;
+
+    public bool IsDone
+    {
+        get
+        {
+            bool temp;
+            lock (handle)
+            {
+                temp = isDone;
+            }
+            return temp;
+        }
+        set
+        {
+            lock (handle)
+            {
+                isDone = value;
+            }
+        }
+    }
+
+    public virtual void Start()
+    {
+        thread = new System.Threading.Thread(Run);
+        thread.Start();
+    }
+    public virtual void Abort()
+    {
+        thread.Abort();
+    }
+
+    protected virtual void ThreadFunction() 
+    { 
+
+    }
+
+    protected virtual void OnFinished() 
+    { 
+
+    }
+
+    public virtual bool CheckComplete()
+    {
+        if (IsDone)
+        {
+            OnFinished();
+            return true;
+        }
+        return false;
+    }
+    public IEnumerator WaitFor()
+    {
+        while(!CheckComplete())
+        {
+            yield return null;
+        }
+    }
+    private void Run()
+    {
+        ThreadFunction();
+        IsDone = true;
+    }
+}
